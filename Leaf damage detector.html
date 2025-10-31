@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Leaf Health Analyzer by Sameen Sadeed Siddiquee</title>
+    <style>
+        /* General Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460, #e94560);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Header */
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #e8e8e8;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        /* File Input Styling */
+        .file-upload {
+            font-size: 18px;
+            padding: 12px 24px;
+            background-color: #ff5722;
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-upload:hover {
+            background-color: #ff7043;
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        canvas {
+            max-width: 45%;
+            height: auto;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Result Styling */
+        .result {
+            font-size: 22px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <h1>Drone Leaf Health Analyzer by Sameen Sadeed Siddiquee, MYP-5D.</h1>
+    <h2>Note that this may not be fully accurate as it is still a beta version.</h2>
+
+    <input type="file" id="fileInput" class="file-upload" multiple accept="image/*">
+
+    <div class="canvas-container">
+        <canvas id="originalCanvas"></canvas>
+        <canvas id="highlightCanvas"></canvas>
+    </div>
+
+    <p id="result" class="result"></p>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const originalCanvas = document.getElementById('originalCanvas');
+        const highlightCanvas = document.getElementById('highlightCanvas');
+        const originalCtx = originalCanvas.getContext('2d');
+        const highlightCtx = highlightCanvas.getContext('2d');
+        const result = document.getElementById('result');
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                const img = new Image();
+
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        originalCanvas.width = img.width;
+                        originalCanvas.height = img.height;
+                        highlightCanvas.width = img.width;
+                        highlightCanvas.height = img.height;
+
+                        originalCtx.drawImage(img, 0, 0);
+                        highlightCtx.drawImage(img, 0, 0);
+                        highlightUnhealthyAreas();
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function highlightUnhealthyAreas() {
+            const imageData = originalCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
+            const pixels = imageData.data;
+            const highlightData = highlightCtx.getImageData(0, 0, highlightCanvas.width, highlightCanvas.height);
+            const highlightPixels = highlightData.data;
+            
+            let damagedPixels = 0;
+            let totalPixels = 0;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                const brightness = (r + g + b) / 3;
+
+                if (brightness > 20) {
+                    totalPixels++;
+                    if ((r > 150 && g > 100 && g < 180 && b < 100) || (r > 120 && g > 80 && g < 140 && b < 90)) {
+                        highlightPixels[i] = 255;
+                        highlightPixels[i + 1] = 0;
+                        highlightPixels[i + 2] = 0;
+                        damagedPixels++;
+                    }
+                }
+            }
+
+            highlightCtx.putImageData(highlightData, 0, 0);
+            let damagePercentage = totalPixels > 0 ? ((damagedPixels / totalPixels) * 100).toFixed(2) : 0;
+            result.textContent = `Unhealthy tree areas highlighted. Damage: ${damagePercentage}%`;
+        }
+    </script>
+</body>
+</html>
